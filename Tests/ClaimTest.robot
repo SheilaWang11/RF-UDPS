@@ -117,6 +117,8 @@ Claim_History_Check
     Verify claim-status is "Validated OK"
     Verify history-tab for Validated-ok claim    ${moddate}
 
+Test Demo
+    log         "test Demo"
 
 
 
