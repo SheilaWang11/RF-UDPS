@@ -1,0 +1,71 @@
+name: $(majorMinorVersion).$(patchVersion)
+
+trigger:
+- master
+
+variables:
+  majorMinorVersion: 1.0
+  patchVersion: $[counter(variables['majorMinorVersion'], 0)]
+
+schedules:
+- cron: 0 0/6 * * * # cron syntax defining a schedule
+  displayName: scheduling the Robo Tests # friendly name given to a specific schedule
+  branches:
+    include: [ main ] # which branches the schedule applies to
+    exclude: [ migration ] # which branches to exclude from the schedule
+  always: true  # whether to always run the pipeline or only if there have bee
+jobs:
+- job: Job_1
+  displayName: Agent job 1
+  pool:
+   name: 'Basic Client POC'
+  steps:
+  - checkout: self
+  - task: CmdLine@2
+    displayName: install packs
+    continueOnError: True
+    inputs:
+       script: |
+        Set http_proxy=http://a345463:$(password)@httppxgot.srv.volvo.com:8080
+        Set https_proxy=http://a345463:$(password)@httppxgot.srv.volvo.com:8080
+        pip install -r $(build.sourcesdirectory)\packages.txt 
+  - task: CmdLine@2
+    displayName: Execute robot tests
+    continueOnError: True
+    inputs:
+       script: |
+        Set PATH=%PATH%;C:\Users\a345463\AppData\Local\rasjani\WebDriverManager\bin
+        webdrivermanager chrome 
+        pabot --verbose --processes 4 -d TestOutput --pythonpath . -x outputxunit.xml --variable headless:$(headless) --include selenium . 
+
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: '$(System.DefaultWorkingDirectory)\TestOutput'
+      artifact: 'TestResults'
+      publishLocation: 'pipeline'
+  - task: PublishTestResults@2
+    inputs:
+      testResultsFormat: 'JUnit'
+      testResultsFiles: 'outputxunit.xml'
+      searchFolder: '$(System.DefaultWorkingDirectory)\TestOutput'
+  # - task: PowerShell@2
+  #   inputs:
+  #     targetType: 'inline'
+  #     script: 'Write-Host "##vso[build.updatebuildnumber]116"'
+  #     errorActionPreference: 'silentlyContinue'
+  - task: PublishTestResultScreenshot@0
+    condition: always()
+    inputs:
+      organization: 'volvogroup'
+      screenshotFolder: '$(System.DefaultWorkingDirectory)\TestOutput\Screenshots\'
+
+  - task: import-testresult-gherkin@1
+    inputs:
+      sourcePath: '$(System.DefaultWorkingDirectory)\TestOutput'
+      testPlan: 'TestAutomationResults'
+      specFileName: 'outputxunit'
+      createTC: true
+      automatedTestNameFromMethod: true
+      fileType: 'JUnit'
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)

@@ -1,0 +1,15 @@
+# output files
+*.html
+*.png
+ 
+# RED
+.idea/
+.vscode
+red.xml
+output.xml
+libspecs/
+ 
+ExternalLibs/__pycache__/*
+
+# localtest file
+localtest.robot
